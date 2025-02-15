@@ -9,7 +9,7 @@ type User struct {
 	ID        uint   `gorm:"primarykey"`
 	Username  string `json:"username" gorm:"unique;type:varchar(20)" validate:"required,min=6,max=32"`
 	FullName  string `json:"full_name" gorm:"type:varchar(200);" validate:"required,min=6"`
-	Password  string `json:"-" gorm:"type:varchar(255);" validate:"required,min=6"`
+	Password  string `json:"password" gorm:"type:varchar(255);" validate:"required,min=6"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
