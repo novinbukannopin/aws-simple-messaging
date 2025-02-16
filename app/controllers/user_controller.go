@@ -51,8 +51,11 @@ func Register(ctx *fiber.Ctx) error {
 }
 
 func Login(ctx *fiber.Ctx) error {
-	user := new(models.LoginRequest)
-	resp := models.LoginResponse{}
+	var (
+		user = new(models.LoginRequest)
+		resp = models.LoginResponse{}
+		now  = time.Now()
+	)
 
 	if err := ctx.BodyParser(user); err != nil {
 		errResponse := fmt.Errorf("error parsing user", err)
@@ -81,14 +84,14 @@ func Login(ctx *fiber.Ctx) error {
 		return response.SendFailureResponse(ctx, fiber.StatusUnauthorized, errResponse.Error(), nil)
 	}
 
-	token, err := jwt.GenerateToken(ctx.Context(), data.Username, data.FullName, "token")
+	token, err := jwt.GenerateToken(ctx.Context(), data.Username, data.FullName, "token", now)
 	if err != nil {
 		errResponse := fmt.Errorf("error generating token", err)
 		fmt.Println(errResponse)
 		return response.SendFailureResponse(ctx, fiber.StatusInternalServerError, errResponse.Error(), nil)
 	}
 
-	refreshToken, err := jwt.GenerateToken(ctx.Context(), data.Username, data.FullName, "refresh_token")
+	refreshToken, err := jwt.GenerateToken(ctx.Context(), data.Username, data.FullName, "refresh_token", now)
 	if err != nil {
 		errResponse := fmt.Errorf("error generating refresh token", err)
 		fmt.Println(errResponse)
@@ -120,4 +123,29 @@ func Logout(ctx *fiber.Ctx) error {
 		return response.SendFailureResponse(ctx, fiber.StatusInternalServerError, errResponse.Error(), nil)
 	}
 	return response.SendSuccessResponse(ctx, nil)
+}
+
+func RefreshToken(ctx *fiber.Ctx) error {
+	now := time.Now()
+	username := ctx.Locals("username").(string)
+	fullName := ctx.Locals("full_name").(string)
+	refreshToken := ctx.Get("Authorization")
+
+	token, err := jwt.GenerateToken(ctx.Context(), username, fullName, "token", now)
+	if err != nil {
+		errResponse := fmt.Errorf("error generating token", err)
+		fmt.Println(errResponse)
+		return response.SendFailureResponse(ctx, fiber.StatusInternalServerError, errResponse.Error(), nil)
+	}
+
+	err = repository.UpdateUserSessionByToken(ctx.Context(), token, now.Add(jwt.MapTypeToken["token"]), refreshToken)
+	if err != nil {
+		errResponse := fmt.Errorf("error updating user session", err)
+		fmt.Println(errResponse)
+		return response.SendFailureResponse(ctx, fiber.StatusInternalServerError, errResponse.Error(), nil)
+	}
+
+	return response.SendSuccessResponse(ctx, fiber.Map{
+		"token": token,
+	})
 }

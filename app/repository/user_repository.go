@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/kooroshh/fiber-boostrap/app/models"
 	"github.com/kooroshh/fiber-boostrap/pkg/database"
+	"time"
 )
 
 func InsertNewUser(ctx context.Context, user *models.User) error {
@@ -34,4 +35,8 @@ func GetUserSessionByToken(ctx context.Context, token string) (models.UserSessio
 
 func DeleteUserSessionByToken(ctx context.Context, token string) error {
 	return database.DB.Exec("DELETE FROM user_sessions WHERE token = ?", token).Error
+}
+
+func UpdateUserSessionByToken(ctx context.Context, token string, tokenExpired time.Time, refreshToken string) error {
+	return database.DB.Exec("UPDATE user_sessions SET token = ?, token_expired = ? WHERE refresh_token = ?", token, tokenExpired, refreshToken).Error
 }

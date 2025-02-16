@@ -33,8 +33,32 @@ func MiddlewareValidateAuth(ctx *fiber.Ctx) error {
 		return response.SendFailureResponse(ctx, fiber.StatusUnauthorized, "Token has expired", nil)
 	}
 
-	ctx.Set("username", claim.Username)
-	ctx.Set("full_name", claim.FullName)
+	ctx.Locals("username", claim.Username)
+	ctx.Locals("full_name", claim.FullName)
+
+	return ctx.Next()
+}
+
+func MiddlewareRefreshToken(ctx *fiber.Ctx) error {
+	auth := ctx.Get("Authorization")
+	if auth == "" {
+		fmt.Println("Authorization header is missing")
+		return response.SendFailureResponse(ctx, fiber.StatusUnauthorized, "Authorization header is missing", nil)
+	}
+
+	claim, err := jwt.ValidateToken(ctx.Context(), auth)
+	if err != nil {
+		fmt.Println("Error validating token", err)
+		return response.SendFailureResponse(ctx, fiber.StatusUnauthorized, "Error validating token", nil)
+	}
+
+	if time.Now().Unix() > claim.ExpiresAt.Unix() {
+		fmt.Println("Token has expired")
+		return response.SendFailureResponse(ctx, fiber.StatusUnauthorized, "Token has expired", nil)
+	}
+
+	ctx.Locals("username", claim.Username)
+	ctx.Locals("full_name", claim.FullName)
 
 	return ctx.Next()
 }
